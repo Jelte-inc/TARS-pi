@@ -4,7 +4,7 @@ import sounddevice as sd
 import socket
 import threading
 
-# Instellingen
+# settings
 SERVER_URI = "ws://192.168.1.100:8000/audio"   # PC server
 SAMPLE_RATE = 16000
 CHANNELS = 1
@@ -43,7 +43,7 @@ def stop_stream():
     global running
     running = False
 
-# Eenvoudige lokale TCP server om Python te bedienen (via Flutter)
+# simple local TCP server to control this function (via Flutter)
 def control_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 5005))
@@ -62,7 +62,7 @@ def control_server():
             conn.send(b"OK")
         conn.close()
 
-# Start de control server in een thread
+# Start the control server in a thread
 threading.Thread(target=control_server, daemon=True).start()
 
 # Start audio stream
