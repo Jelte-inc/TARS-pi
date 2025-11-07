@@ -4,8 +4,7 @@ import sounddevice as sd
 import socket
 import threading
 
-# settings
-SERVER_URI = "ws://192.168.1.100:8000/audio"   # PC server
+SERVER_URI = "ws://192.168.2.17:8000/audio"
 SAMPLE_RATE = 16000
 CHANNELS = 1
 DTYPE = 'int16'
@@ -18,10 +17,15 @@ async def stream_audio():
     async with websockets.connect(SERVER_URI, ping_interval=None) as ws:
         print("Connected to PC STT server.")
 
+        # Pak het event loop object hier, in de main async context
+        loop = asyncio.get_running_loop()
+
         def callback(indata, frames, time, status):
             if running:
-                asyncio.get_event_loop().call_soon_threadsafe(
-                    asyncio.create_task, ws.send(indata.tobytes())
+                # Gebruik het loop-object, niet get_event_loop()
+                loop.call_soon_threadsafe(
+                    asyncio.create_task,
+                    ws.send(indata.tobytes())
                 )
 
         with sd.InputStream(
@@ -31,9 +35,7 @@ async def stream_audio():
             blocksize=FRAMES,
             callback=callback
         ):
-            await asyncio.Future()  # keep running
-
-asyncio_loop = asyncio.get_event_loop()
+            await asyncio.Future()  # houdt het draaiend voor altijd
 
 def start_stream():
     global running
@@ -43,7 +45,6 @@ def stop_stream():
     global running
     running = False
 
-# simple local TCP server to control this function (via Flutter)
 def control_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 5005))
@@ -60,10 +61,9 @@ def control_server():
         elif cmd == "STOP":
             stop_stream()
             conn.send(b"OK")
+
         conn.close()
 
-# Start the control server in a thread
 threading.Thread(target=control_server, daemon=True).start()
 
-# Start audio stream
-asyncio_loop.run_until_complete(stream_audio())
+asyncio.run(stream_audio())
