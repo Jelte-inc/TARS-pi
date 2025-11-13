@@ -2,7 +2,7 @@ import os
 import sys
 from ctypes import cdll, CFUNCTYPE, c_char_p, c_int, c_void_p
 
-# Keep a global reference so it isn't GC'd.
+# Keep a global reference so it isn't GC'd..
 _ALSA_HANDLER = None
 
 def suppress_alsa_errors():
