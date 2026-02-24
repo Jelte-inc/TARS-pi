@@ -19,16 +19,18 @@ async def move_action(args):
     if(steps == 0):
         Exception("NO STEPS GIVEN")
         #TODO: switch case
+        steps = args.get("steps", 0) # default to 1 step if not provided or 0
     if (direction != None and direction.strip() != "" ):
-        if (direction == "left"):
-            servo_controller.move_left(given_steps=args.get("steps"))    
-        if (direction == "right"):
-            servo_controller.move_right(given_steps=args.get("steps"))
-        if (direction == "forward"):
-            servo_controller.move_forward(given_steps=args.get("steps"))
-        if (direction == "backward"):
-            servo_controller.move_backward(given_steps=args.get("steps"))
-
+        match direction.lower():
+            case "left":
+                servo_controller.move_left(steps)
+            case "right":
+                servo_controller.move_right(steps)
+            case "forward":
+                servo_controller.move_forward(steps)
+            case "backward":
+                servo_controller.move_backward(steps)
+                
     print(f"Executing MOVE: Going {direction}...")
 
 async def handle_api_data(data):
@@ -50,19 +52,31 @@ async def handle_api_data(data):
     else:
         print(f"Unknown command: {command}; Skipping actions")
 
+async def handle_text_message(message) -> bool:
+    if not isinstance(message, str):
+        return False
+
+    try:
+        data = json.loads(message)
+        print(data)
+    except json.JSONDecodeError:
+        return False
+
+    await handle_api_data(data)
+    return True
+
 async def receiver(websocket):
     #TODO: change this message
     print("Verbonden met command-center.")
     async for message in websocket:
-        try:
-            # Parse de JSON stream
-            data = json.loads(message)
-            await handle_api_data(data)
-            
-        except json.JSONDecodeError:
+        if not await handle_text_message(message):
             print("Error: Received invalid JSON")
 
 # Main websocket loop
 async def text_websocket_task():
-    async with websockets.serve(receiver, "0.0.0.0", 8765, ping_interval=None):
-        await asyncio.Future()
+    uri = "ws://149.143.35.169:56277/ws"  # pas aan naar je server
+    async with websockets.connect(uri, ping_interval=None) as websocket:
+        print("Verbonden met command-center.")
+        async for message in websocket:
+            if not await handle_text_message(message):
+                print("Error: Received invalid JSON")
